@@ -50,7 +50,7 @@ function is_vm_running {
 # Function to execute a command on the master VM and return the output
 function run_on_master {
     local cmd="$1"
-    vagrant ssh "${MASTER_VM}" -c "${cmd}" || error_exit "Falha ao executar o comando na VM master."
+    vagrant ssh "${MASTER_VM}" -c "${cmd}" || error_exit "Failed to execute command on the master VM."
 }
 
 # Function to check if a command exists
@@ -58,7 +58,7 @@ function check_command {
     local cmd="$1"
     local name="$2"
     if ! command -v "${cmd}" >/dev/null 2>&1; then
-        error_exit "${name} não está instalado. Por favor, instale ${name} antes de continuar."
+        error_exit "${name} is not installed. Please install ${name} before continuing."
     fi
 }
 
@@ -76,31 +76,29 @@ WORKER_VMS=("kube-node-1" "kube-node-2")
 # Script Execution
 # ========================
 
-# Verificar instalações necessárias
-info "Verificando instalações necessárias..."
+# Check necessary installations
+info "Checking necessary installations..."
 
 check_command "ansible" "Ansible"
 check_command "vagrant" "Vagrant"
 
-# Verificar VirtualBox através do comando VBoxManage
+# Check VirtualBox using the VBoxManage command
 if ! command -v VBoxManage >/dev/null 2>&1; then
-    error_exit "VirtualBox não está instalado. Por favor, instale o VirtualBox antes de continuar."
+    error_exit "VirtualBox is not installed. Please install VirtualBox before continuing."
 fi
 
-success "Todas as dependências estão instaladas."
+success "All dependencies are installed."
+
+info "Starting the Vagrant environment..."
+vagrant up || error_exit "Failed to execute 'vagrant up'."
 
 echo
 
-info "Iniciando o ambiente Vagrant..."
-vagrant up || error_exit "Falha ao executar 'vagrant up'."
+success "Vagrant environment started successfully."
 
 echo
 
-success "Ambiente Vagrant iniciado com sucesso."
-
-echo
-
-info "Status atual das VMs:"
+info "Current status of VMs:"
 echo "---------------------------------"
 vagrant status
 echo "---------------------------------"
@@ -109,17 +107,17 @@ echo
 
 # Check if the master VM is running
 if ! is_vm_running "${MASTER_VM}"; then
-    warning "A VM master '${MASTER_VM}' não está no estado 'running'."
-    info "Tentando recarregar a VM master '${MASTER_VM}'..."
-    vagrant reload "${MASTER_VM}" || error_exit "Falha ao recarregar a VM master '${MASTER_VM}'."
+    warning "The master VM '${MASTER_VM}' is not in the 'running' state."
+    info "Attempting to reload the master VM '${MASTER_VM}'..."
+    vagrant reload "${MASTER_VM}" || error_exit "Failed to reload the master VM '${MASTER_VM}'."
 
     # Check the status again after reload
     if ! is_vm_running "${MASTER_VM}"; then
-        error_exit "A VM master '${MASTER_VM}' ainda não está ativa após o recarregamento. Por favor, verifique o Vagrantfile e a configuração da VM."
+        error_exit "The master VM '${MASTER_VM}' is still not active after reload. Please check the Vagrantfile and VM configuration."
     fi
-    success "VM master '${MASTER_VM}' recarregada e agora está ativa."
+    success "Master VM '${MASTER_VM}' reloaded and is now active."
 else
-    success "VM master '${MASTER_VM}' está ativa."
+    success "Master VM '${MASTER_VM}' is active."
 fi
 
 echo
@@ -127,27 +125,27 @@ echo
 # Check if the worker VMs are running
 for worker in "${WORKER_VMS[@]}"; do
     if ! is_vm_running "${worker}"; then
-        warning "A VM worker '${worker}' não está no estado 'running'."
-        info "Tentando recarregar a VM worker '${worker}'..."
-        vagrant reload "${worker}" || error_exit "Falha ao recarregar a VM worker '${worker}'."
+        warning "The worker VM '${worker}' is not in the 'running' state."
+        info "Attempting to reload the worker VM '${worker}'..."
+        vagrant reload "${worker}" || error_exit "Failed to reload the worker VM '${worker}'."
 
         # Check the status again after reload
         if ! is_vm_running "${worker}"; then
-            error_exit "A VM worker '${worker}' ainda não está ativa após o recarregamento. Por favor, verifique o Vagrantfile e a configuração da VM."
+            error_exit "The worker VM '${worker}' is still not active after reload. Please check the Vagrantfile and VM configuration."
         fi
-        success "VM worker '${worker}' recarregada e agora está ativa."
+        success "Worker VM '${worker}' reloaded and is now active."
     else
-        success "VM worker '${worker}' está ativa."
+        success "Worker VM '${worker}' is active."
     fi
 done
 
-success "Todas as VMs estão ativas."
+success "All VMs are active."
 
 # Collect Kubernetes cluster information using kubectl on the master VM
-info "Coletando informações do cluster Kubernetes na VM '${MASTER_VM}'..."
-K8S_CLUSTER_INFO=$(run_on_master "kubectl cluster-info") || error_exit "Falha ao recuperar informações do cluster Kubernetes."
+info "Collecting Kubernetes cluster information on VM '${MASTER_VM}'..."
+K8S_CLUSTER_INFO=$(run_on_master "kubectl cluster-info") || error_exit "Failed to retrieve Kubernetes cluster information."
 
-echo -e "${GREEN}Informações do Cluster Kubernetes:${NC}"
+echo -e "${GREEN}Kubernetes Cluster Information:${NC}"
 echo "---------------------------------"
 echo "${K8S_CLUSTER_INFO}"
 echo "---------------------------------"
@@ -155,39 +153,39 @@ echo "---------------------------------"
 echo
 
 # List the nodes in the Kubernetes cluster
-info "Listando nós no cluster Kubernetes:"
-run_on_master "kubectl get nodes" || error_exit "Falha ao listar os nós do Kubernetes."
+info "Listing nodes in the Kubernetes cluster:"
+run_on_master "kubectl get nodes" || error_exit "Failed to list Kubernetes nodes."
 
 echo
 
 # List the namespaces in the Kubernetes cluster
-info "Listando namespaces no cluster Kubernetes:"
-run_on_master "kubectl get namespaces" || error_exit "Falha ao listar os namespaces do Kubernetes."
+info "Listing namespaces in the Kubernetes cluster:"
+run_on_master "kubectl get namespaces" || error_exit "Failed to list Kubernetes namespaces."
 
 echo
 
 # List the pods in all namespaces
-info "Listando pods em todos os namespaces:"
-run_on_master "kubectl get pods --all-namespaces" || error_exit "Falha ao listar os pods do Kubernetes."
+info "Listing pods in all namespaces:"
+run_on_master "kubectl get pods --all-namespaces" || error_exit "Failed to list Kubernetes pods."
 
 echo
 
 # Export the kubeconfig from the master VM to the host machine
-info "Exportando kubeconfig da VM master para a máquina host..."
-run_on_master "cat ~/.kube/config" >kubeconfig_master || error_exit "Falha ao exportar o kubeconfig."
+info "Exporting kubeconfig from the master VM to the host machine..."
+run_on_master "cat ~/.kube/config" >kubeconfig_master || error_exit "Failed to export kubeconfig."
 
 echo
 
 # Verify if kubeconfig was successfully exported
 if [[ -f "kubeconfig_master" ]]; then
-    success "Kubeconfig exportado com sucesso para 'kubeconfig_master'."
-    echo -e "${YELLOW}Você pode usar este arquivo com kubectl adicionando a opção --kubeconfig=./kubeconfig_master${NC}"
-    echo -e "${YELLOW}Exemplo:${NC}"
+    success "Kubeconfig successfully exported to 'kubeconfig_master'."
+    echo -e "${YELLOW}You can use this file with kubectl by adding the option --kubeconfig=./kubeconfig_master${NC}"
+    echo -e "${YELLOW}Example:${NC}"
     echo "kubectl --kubeconfig=./kubeconfig_master get nodes"
 else
-    error_exit "Falha ao verificar o arquivo kubeconfig exportado."
+    error_exit "Failed to verify the exported kubeconfig file."
 fi
 
 echo
 
-success "Configuração do cluster Kubernetes concluída com sucesso."
+success "Kubernetes cluster setup completed successfully."
