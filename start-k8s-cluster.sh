@@ -17,40 +17,49 @@ NC='\033[0m' # No Color
 
 # Function to display error messages and exit the script
 function error_exit {
-	echo -e "${RED}Error: $1${NC}" >&2
-	exit 1
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
 }
 
 # Function to display informational messages
 function info {
-	echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 # Function to display success messages
 function success {
-	echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
 # Function to display warning messages
 function warning {
-	echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
 # Function to check if a VM is running using 'vagrant status <vm>'
 function is_vm_running {
-	local vm_name="$1"
-	local status=$(vagrant status "${vm_name}" | grep -i "^${vm_name}" | awk '{print $2}' | tr '[:upper:]' '[:lower:]')
-	if [[ ${status} == "running" ]]; then
-		return 0
-	else
-		return 1
-	fi
+    local vm_name="$1"
+    local status=$(vagrant status "${vm_name}" | grep -i "^${vm_name}" | awk '{print $2}' | tr '[:upper:]' '[:lower:]')
+    if [[ ${status} == "running" ]]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Function to execute a command on the master VM and return the output
 function run_on_master {
-	local cmd="$1"
-	vagrant ssh "${MASTER_VM}" -c "${cmd}" || error_exit "Failed to execute command on the master VM."
+    local cmd="$1"
+    vagrant ssh "${MASTER_VM}" -c "${cmd}" || error_exit "Falha ao executar o comando na VM master."
+}
+
+# Function to check if a command exists
+function check_command {
+    local cmd="$1"
+    local name="$2"
+    if ! command -v "${cmd}" >/dev/null 2>&1; then
+        error_exit "${name} não está instalado. Por favor, instale ${name} antes de continuar."
+    fi
 }
 
 # ========================
@@ -67,16 +76,31 @@ WORKER_VMS=("kube-node-1" "kube-node-2")
 # Script Execution
 # ========================
 
-info "Starting Vagrant environment..."
-vagrant up || error_exit "Failed to execute 'vagrant up'."
+# Verificar instalações necessárias
+info "Verificando instalações necessárias..."
+
+check_command "ansible" "Ansible"
+check_command "vagrant" "Vagrant"
+
+# Verificar VirtualBox através do comando VBoxManage
+if ! command -v VBoxManage >/dev/null 2>&1; then
+    error_exit "VirtualBox não está instalado. Por favor, instale o VirtualBox antes de continuar."
+fi
+
+success "Todas as dependências estão instaladas."
 
 echo
 
-success "Vagrant environment started successfully."
+info "Iniciando o ambiente Vagrant..."
+vagrant up || error_exit "Falha ao executar 'vagrant up'."
 
 echo
 
-info "Current status of VMs:"
+success "Ambiente Vagrant iniciado com sucesso."
+
+echo
+
+info "Status atual das VMs:"
 echo "---------------------------------"
 vagrant status
 echo "---------------------------------"
@@ -85,45 +109,45 @@ echo
 
 # Check if the master VM is running
 if ! is_vm_running "${MASTER_VM}"; then
-	warning "The master VM '${MASTER_VM}' is not in the 'running' state."
-	info "Attempting to reload the master VM '${MASTER_VM}'..."
-	vagrant reload "${MASTER_VM}" || error_exit "Failed to reload the master VM '${MASTER_VM}'."
+    warning "A VM master '${MASTER_VM}' não está no estado 'running'."
+    info "Tentando recarregar a VM master '${MASTER_VM}'..."
+    vagrant reload "${MASTER_VM}" || error_exit "Falha ao recarregar a VM master '${MASTER_VM}'."
 
-	# Check the status again after reload
-	if ! is_vm_running "${MASTER_VM}"; then
-		error_exit "Master VM '${MASTER_VM}' is still not active after reload. Please check the Vagrantfile and VM configuration."
-	fi
-	success "Master VM '${MASTER_VM}' reloaded and is now active."
+    # Check the status again after reload
+    if ! is_vm_running "${MASTER_VM}"; then
+        error_exit "A VM master '${MASTER_VM}' ainda não está ativa após o recarregamento. Por favor, verifique o Vagrantfile e a configuração da VM."
+    fi
+    success "VM master '${MASTER_VM}' recarregada e agora está ativa."
 else
-	success "Master VM '${MASTER_VM}' is active."
+    success "VM master '${MASTER_VM}' está ativa."
 fi
 
 echo
 
 # Check if the worker VMs are running
 for worker in "${WORKER_VMS[@]}"; do
-	if ! is_vm_running "${worker}"; then
-		warning "The worker VM '${worker}' is not in the 'running' state."
-		info "Attempting to reload the worker VM '${worker}'..."
-		vagrant reload "${worker}" || error_exit "Failed to reload the worker VM '${worker}'."
+    if ! is_vm_running "${worker}"; then
+        warning "A VM worker '${worker}' não está no estado 'running'."
+        info "Tentando recarregar a VM worker '${worker}'..."
+        vagrant reload "${worker}" || error_exit "Falha ao recarregar a VM worker '${worker}'."
 
-		# Check the status again after reload
-		if ! is_vm_running "${worker}"; then
-			error_exit "Worker VM '${worker}' is still not active after reload. Please check the Vagrantfile and VM configuration."
-		fi
-		success "Worker VM '${worker}' reloaded and is now active."
-	else
-		success "Worker VM '${worker}' is active."
-	fi
+        # Check the status again after reload
+        if ! is_vm_running "${worker}"; then
+            error_exit "A VM worker '${worker}' ainda não está ativa após o recarregamento. Por favor, verifique o Vagrantfile e a configuração da VM."
+        fi
+        success "VM worker '${worker}' recarregada e agora está ativa."
+    else
+        success "VM worker '${worker}' está ativa."
+    fi
 done
 
-success "All VMs are active."
+success "Todas as VMs estão ativas."
 
 # Collect Kubernetes cluster information using kubectl on the master VM
-info "Collecting Kubernetes cluster information on VM '${MASTER_VM}'..."
-K8S_CLUSTER_INFO=$(run_on_master "kubectl cluster-info") || error_exit "Failed to retrieve Kubernetes cluster information."
+info "Coletando informações do cluster Kubernetes na VM '${MASTER_VM}'..."
+K8S_CLUSTER_INFO=$(run_on_master "kubectl cluster-info") || error_exit "Falha ao recuperar informações do cluster Kubernetes."
 
-echo -e "${GREEN}Kubernetes Cluster Information:${NC}"
+echo -e "${GREEN}Informações do Cluster Kubernetes:${NC}"
 echo "---------------------------------"
 echo "${K8S_CLUSTER_INFO}"
 echo "---------------------------------"
@@ -131,39 +155,39 @@ echo "---------------------------------"
 echo
 
 # List the nodes in the Kubernetes cluster
-info "Listing nodes in the Kubernetes cluster:"
-run_on_master "kubectl get nodes" || error_exit "Failed to list Kubernetes nodes."
+info "Listando nós no cluster Kubernetes:"
+run_on_master "kubectl get nodes" || error_exit "Falha ao listar os nós do Kubernetes."
 
 echo
 
 # List the namespaces in the Kubernetes cluster
-info "Listing namespaces in the Kubernetes cluster:"
-run_on_master "kubectl get namespaces" || error_exit "Failed to list Kubernetes namespaces."
+info "Listando namespaces no cluster Kubernetes:"
+run_on_master "kubectl get namespaces" || error_exit "Falha ao listar os namespaces do Kubernetes."
 
 echo
 
 # List the pods in all namespaces
-info "Listing pods in all namespaces:"
-run_on_master "kubectl get pods --all-namespaces" || error_exit "Failed to list Kubernetes pods."
+info "Listando pods em todos os namespaces:"
+run_on_master "kubectl get pods --all-namespaces" || error_exit "Falha ao listar os pods do Kubernetes."
 
 echo
 
 # Export the kubeconfig from the master VM to the host machine
-info "Exporting kubeconfig from the master VM to the host machine..."
-run_on_master "cat ~/.kube/config" >kubeconfig_master || error_exit "Failed to export kubeconfig."
+info "Exportando kubeconfig da VM master para a máquina host..."
+run_on_master "cat ~/.kube/config" >kubeconfig_master || error_exit "Falha ao exportar o kubeconfig."
 
 echo
 
 # Verify if kubeconfig was successfully exported
 if [[ -f "kubeconfig_master" ]]; then
-	success "Kubeconfig successfully exported to 'kubeconfig_master'."
-	echo -e "${YELLOW}You can use this file with kubectl by adding the option --kubeconfig=./kubeconfig_master${NC}"
-	echo -e "${YELLOW}Example:${NC}"
-	echo "kubectl --kubeconfig=./kubeconfig_master get nodes"
+    success "Kubeconfig exportado com sucesso para 'kubeconfig_master'."
+    echo -e "${YELLOW}Você pode usar este arquivo com kubectl adicionando a opção --kubeconfig=./kubeconfig_master${NC}"
+    echo -e "${YELLOW}Exemplo:${NC}"
+    echo "kubectl --kubeconfig=./kubeconfig_master get nodes"
 else
-	error_exit "Failed to verify the exported kubeconfig file."
+    error_exit "Falha ao verificar o arquivo kubeconfig exportado."
 fi
 
 echo
 
-success "Kubernetes cluster setup completed successfully."
+success "Configuração do cluster Kubernetes concluída com sucesso."
