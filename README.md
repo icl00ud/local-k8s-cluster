@@ -45,5 +45,4 @@ Got questions? Ping me at israelschroederm@gmail.com 😉
 <div align="center">
 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/ansible/ansible-original.svg" height="75" width="90" alt="ansible logo" style="margin-right: 25px;" />
 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vagrant/vagrant-original.svg" height="75" width="90" alt="vagrant logo" style="margin-right: 25px;" />
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kubernetes/kubernetes-original.svg" width="75" height="90" alt="kubernetes logo" />
 </div>
