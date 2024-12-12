@@ -29,7 +29,7 @@ Vagrant.configure("2") do |config|
   # ====================
   # Worker Nodes Configuration
   # ====================
-  (1..2).each do |i|
+  (1..1).each do |i|
     config.vm.define "kube-node-#{i}" do |node|
       node.vm.hostname = "kube-node-#{i}"
       
