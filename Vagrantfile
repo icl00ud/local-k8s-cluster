@@ -10,16 +10,14 @@ Vagrant.configure("2") do |config|
   # ====================
   config.vm.define "kube-master" do |master|
     master.vm.hostname = "kube-master"
-    
-    # Set a static private IP for the master node
     master.vm.network "private_network", ip: "192.168.56.10"
-    
+    master.vm.network "public_network", ip: "192.168.1.10"
+  
     master.vm.provider "virtualbox" do |vb|
-      vb.memory = 4096  # Allocate 4GB RAM; adjust if needed
-      vb.cpus = 2       # Assign 2 CPU cores
+      vb.memory = 4096
+      vb.cpus = 2
     end
-
-    # Provision the master node using Ansible
+  
     master.vm.provision "ansible" do |ansible|
       ansible.playbook = "./ansible/playbooks/kube-master.yml"
       ansible.inventory_path = "./ansible/inventories/hosts.ini"
