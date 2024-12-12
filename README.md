@@ -1,7 +1,4 @@
-<h3 align="center">Local K8s Cluster with VirtualBox, Vagrant, and Ansible</h3>
-
-
----
+<h2 align="center">Local K8s Cluster with VirtualBox, Vagrant, and Ansible</h2>
 
 <p align="center"> This repository contains the necessary files to provision and configure three nodes using VirtualBox, Vagrant, and Ansible. The goal is to create a local development environment for testing and experimenting with Kubernetes.</p>
 
