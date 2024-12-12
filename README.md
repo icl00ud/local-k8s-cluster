@@ -28,8 +28,8 @@ git clone https://github.com/icl00ud/local-k8s-cluster.git
 
 ```bash
 cd local-k8s-cluster
-chmod +x ./start-k8s-cluster.sh # give permission to exec
-./start-k8s-cluster.sh
+chmod +x ./up-k8s-cluster.sh # give permission to exec
+./up-k8s-cluster.sh
 ```
 
 If everything goes well, you'll see a success message with your cluster info. If not, it'll show the error.
