@@ -1,3 +1,9 @@
+# Vagrantfile
+def get_bridge_interface
+  bridges = `vboxmanage list bridgedifs`.scan(/^Name: +(.*)$/).flatten
+  bridges.find { |bridge| !bridge.include?("docker") && !bridge.include?("calico") } || bridges.first
+end
+
 Vagrant.configure("2") do |config|
   # Prevent VMs from being created in parallel to avoid provisioning conflicts
   ENV["VAGRANT_NO_PARALLEL"] = "true"
@@ -11,7 +17,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "kube-master" do |master|
     master.vm.hostname = "kube-master"
     master.vm.network "private_network", ip: "192.168.56.10"
-    master.vm.network "public_network", ip: "192.168.1.10"
+    master.vm.network "forwarded_port", guest: 6443, host: 6444, host_ip: "192.168.1.10"
   
     master.vm.provider "virtualbox" do |vb|
       vb.memory = 4096
@@ -29,7 +35,7 @@ Vagrant.configure("2") do |config|
   # ====================
   # Worker Nodes Configuration
   # ====================
-  (1..1).each do |i|
+  (1..2).each do |i|
     config.vm.define "kube-node-#{i}" do |node|
       node.vm.hostname = "kube-node-#{i}"
       

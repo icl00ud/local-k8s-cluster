@@ -1,8 +1,10 @@
+# roles/kubernetes-master/tasks/main.yml
 - name: Hold Kubernetes packages to prevent updates
   command: apt-mark hold kubelet kubeadm kubectl
 
-- name: Initialize Kubernetes cluster
-  command: kubeadm init --apiserver-advertise-address=192.168.56.10 --pod-network-cidr=192.168.0.0/16
+- name: Initialize Kubernetes cluster com SANs adicionais
+  command: >
+    kubeadm init --apiserver-advertise-address=192.168.56.10 --apiserver-cert-extra-sans=192.168.1.10 --pod-network-cidr=192.168.0.0/16
   args:
     creates: /etc/kubernetes/admin.conf
 
@@ -27,3 +29,40 @@
 - name: Install pod network (Calico)
   become_user: vagrant
   shell: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+- name: Atualizar kube-apiserver.yaml para escutar em todas as interfaces
+  lineinfile:
+    path: /etc/kubernetes/manifests/kube-apiserver.yaml
+    regexp: '^(\s*--bind-address=).+$'
+    line: '\1 0.0.0.0'
+    backrefs: yes
+  notify:
+  - Restart kubelet
+
+- name: Permitir conexões na porta 6443 com UFW
+  ufw:
+    rule: allow
+    port: 6443
+    proto: tcp
+
+- name: Permitir conexões SSH na porta 22
+  ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+
+- name: Permitir conexões SSH na porta 2200
+  ufw:
+    rule: allow
+    port: 2200
+    proto: tcp
+
+- name: Permitir conexões SSH na porta 2222
+  ufw:
+    rule: allow
+    port: 2222
+    proto: tcp
+
+- name: Ativar UFW
+  ufw:
+    state: enabled
