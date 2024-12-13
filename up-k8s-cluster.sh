@@ -72,6 +72,9 @@ MASTER_VM="kube-master"
 # Names of the worker VMs
 WORKER_VMS=("kube-node-1" "kube-node-2")
 
+# Desired server IP and port
+DESIRED_SERVER="https://192.168.1.10:6444"
+
 # ========================
 # Script Execution
 # ========================
@@ -120,25 +123,6 @@ else
     success "Master VM '${MASTER_VM}' is active."
 fi
 
-echo
-
-# Check if the worker VMs are running
-for worker in "${WORKER_VMS[@]}"; do
-    if ! is_vm_running "${worker}"; then
-        warning "The worker VM '${worker}' is not in the 'running' state."
-        info "Attempting to reload the worker VM '${worker}'..."
-        vagrant reload "${worker}" || error_exit "Failed to reload the worker VM '${worker}'."
-
-        # Check the status again after reload
-        if ! is_vm_running "${worker}"; then
-            error_exit "The worker VM '${worker}' is still not active after reload. Please check the Vagrantfile and VM configuration."
-        fi
-        success "Worker VM '${worker}' reloaded and is now active."
-    else
-        success "Worker VM '${worker}' is active."
-    fi
-done
-
 success "All VMs are active."
 
 # Collect Kubernetes cluster information using kubectl on the master VM
@@ -170,9 +154,17 @@ run_on_master "cat ~/.kube/config" >kubeconfig_master || error_exit "Failed to e
 
 echo
 
-# Verify if kubeconfig was successfully exported
+# Modify the server IP and port in the exported kubeconfig
+info "Modifying server to ${DESIRED_SERVER}..."
+sed -i "s|server: https://[^:]*:[0-9]*|server: ${DESIRED_SERVER}|" kubeconfig_master || error_exit "Failed to modify the kubeconfig server IP."
+
+success "Kubeconfig server IP modified to '${DESIRED_SERVER}'."
+
+echo
+
+# Verify if kubeconfig was successfully exported and modified
 if [[ -f "kubeconfig_master" ]]; then
-    success "Kubeconfig successfully exported to 'kubeconfig_master'."
+    success "Kubeconfig successfully exported and modified to 'kubeconfig_master'."
     echo -e "${YELLOW}You can use this file with kubectl by adding the option --kubeconfig=./kubeconfig_master${NC}"
     echo -e "${YELLOW}Example:${NC}"
     echo "kubectl --kubeconfig=./kubeconfig_master get nodes"
