@@ -158,12 +158,6 @@ run_on_master "kubectl get nodes" || error_exit "Failed to list Kubernetes nodes
 
 echo
 
-# List the namespaces in the Kubernetes cluster
-info "Listing namespaces in the Kubernetes cluster:"
-run_on_master "kubectl get namespaces" || error_exit "Failed to list Kubernetes namespaces."
-
-echo
-
 # List the pods in all namespaces
 info "Listing pods in all namespaces:"
 run_on_master "kubectl get pods --all-namespaces" || error_exit "Failed to list Kubernetes pods."

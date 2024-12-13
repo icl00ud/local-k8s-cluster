@@ -129,11 +129,4 @@ success "Kubernetes cluster has been torn down successfully."
 
 echo
 
-info "Cleaning up additional resources, if any..."
-# Add any additional cleanup commands here if necessary
-
-success "Cleanup completed."
-
-echo
-
 success "Cluster teardown script finished successfully."
